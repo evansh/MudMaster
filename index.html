@@ -1,23 +1,86 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>MudMaster Adventure</title><style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>MudMaster Adventure</title><style>
 *{box-sizing:border-box}body{margin:0;background:#14251b;color:white;font: bold 15px system-ui}main{max-width:1200px;margin:auto;padding:8px}header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}h1{font-size:22px;color:#ffda50;margin:4px}button,input{font:inherit;border:0;border-radius:10px;padding:10px}button{background:#416247;color:white;cursor:pointer;touch-action:none}button:active{background:#75995a}canvas{width:100%;height: min(57dvh, 560px);display:block;background:#658c42;touch-action:none;border-radius:12px}.controls{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0}.controls button{min-height:55px;padding:5px;font-size:clamp(12px,2vw,18px)}#garage{padding:12px;background:#263b2b;border-radius:12px}#cars{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}#cars button{min-height:70px}#cars .selected{outline:3px solid #ffda50}#garage[hidden]{display:none}#tip{color:#ffda50;margin:6px 0}a{color:#bfe8ff}table{width:100%;text-align:left}td{padding:5px;border-bottom:1px solid #ffffff22}small{color:#c6d6bf}@media(max-height:500px){canvas{height:48dvh}.controls button{min-height:40px}h1{font-size:16px}}
-</style></head><body><main><header><h1>🛻 MudMaster Adventure</h1><span id="hud">⭐ 0 · 🗺️ 0/6 · ⚡ 100%</span><button id="open">Garage / Save</button></header><canvas id="c"></canvas><div class="controls"><button data-k="left">◀ Left</button><button data-k="right">Right ▶</button><button data-k="reverse">▼ Reverse</button><button data-k="jump">⬆ Jump</button><button data-k="boost" style="background:#b86c19">⚡ Turbo</button><button data-k="gas" style="background:#218d43">▲ Gas</button></div><div id="tip">Explore anywhere! Find six landmarks and hidden gold.</div><section id="garage"><h2 id="heading">Choose your adventure vehicle</h2><input id="name" maxlength="18" placeholder="Racing nickname"><div id="cars"></div><button id="start" style="background:#d77c21">Let's explore!</button> <button id="save">Save score &amp; finish</button><h3>🏆 Explorer Hall of Fame</h3><table><tbody id="board"></tbody></table><small>Scores are saved on this browser when storage is available.</small><p><a href="classic.html">Play the original racing game</a></p></section></main><script>
+
+body{background:#151a17;color:#f5f1e4;font-weight:600}
+main{padding:12px}header{padding:5px 0 12px}h1{color:#f0bc66;letter-spacing:.03em}
+#hud{font-variant-numeric:tabular-nums;color:#e4dcc8}
+canvas{height:min(61dvh,620px);border:1px solid #535443}
+button{background:#354038}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #f3c474;outline-offset:2px}
+#garage{background:#242b25}#tip{color:#e7c890;min-height:2em}
+#cars button{background:#313931!important;border-bottom:4px solid var(--vehicle)}
+@media(max-width:490px){.controls{grid-template-columns:repeat(3,1fr)}.controls button{min-height:44px}#hud{order:3;width:100%;font-size:13px}}
+</style></head><body><main><header><h1>🛻 MudMaster Adventure</h1><span id="hud">⭐ 0 · 🗺️ 0/6 · ⚡ 100%</span><button id="open" aria-controls="garage" aria-expanded="true">Garage / Save</button></header><canvas id="c" aria-label="MudMaster off-road map"></canvas><div class="controls"><button data-k="left">◀ Left</button><button data-k="right">Right ▶</button><button data-k="reverse">▼ Reverse</button><button data-k="jump">⬆ Jump</button><button data-k="boost" style="background:#b86c19">⚡ Turbo</button><button data-k="gas" style="background:#218d43">▲ Gas</button></div><div id="tip">Drive with the arrow keys or WASD. Hold Shift for turbo and Space at ramps.</div><section id="garage"><h2 id="heading">Choose your adventure vehicle</h2><input id="name" aria-label="Racing nickname" maxlength="18" placeholder="Racing nickname"><div id="cars"></div><button id="start" style="background:#d77c21">Let's explore!</button> <button id="save">Save score &amp; finish</button><h3>🏆 Explorer Hall of Fame</h3><table><tbody id="board"></tbody></table><small>Scores are saved on this browser when storage is available.</small><p><a href="classic.html">Play the original racing game</a></p></section></main><script>
 const $=id=>document.getElementById(id),c=$('c'),g=c.getContext('2d'),S=3600;
 const cars=[['Monster Truck','#ef4937',5.8,.92,.055,42,28],['Rock Crawler','#76c43e',4.8,.98,.077,34,24],['Dune Buggy','#36a4f2',8,.62,.07,35,22],['Four-Wheeler','#f5a12d',6.8,.77,.09,25,18],['Diesel Mud Truck','#424a55',5.5,1,.045,48,28],['Rally Car','#a760e8',8.5,.52,.065,39,22]];
 const zones=[['Mud Bog',700,750,330,'#79502d'],['Pine Forest',2800,650,390,'#416d36'],['Rock Canyon',2800,2700,350,'#9e8c72'],['Sandy Dunes',650,2750,390,'#c8ae70'],['Splash Lake',1800,2900,300,'#529fb4'],['Jump Park',1800,650,300,'#b58a51']];
 let seed=19;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}const trees=[],rocks=[],gold=[],ramps=[];for(let i=0;i<260;i++){let x=100+rand()*3400,y=100+rand()*3400;if(Math.hypot(x-1800,y-1800)>230&&!zones.some(z=>[0,4,5].includes(zones.indexOf(z))&&Math.hypot(x-z[1],y-z[2])<z[3]))trees.push([x,y,15+rand()*15])}for(let i=0;i<45;i++)rocks.push([2520+rand()*560,2420+rand()*560,9+rand()*15]);for(let i=0;i<100;i++)gold.push([100+rand()*3400,100+rand()*3400]);for(let i=0;i<8;i++)ramps.push([1600+i%4*130,520+Math.floor(i/4)*210]);
-let board=[];try{board=JSON.parse(localStorage.getItem('mudmasterExplore')||'[]');if(!Array.isArray(board))board=[]}catch(e){}let selected=0,x=1800,y=1800,a=-Math.PI/2,v=0,energy=100,score=0,active=false,paused=true,name='',keys={},found=new Set(),taken=new Set(),tracks=[],jump=0,last=0,dist=0,visited=new Set(),airReady=true;
+let board=[];try{board=JSON.parse(localStorage.getItem('mudmasterExplore')||'[]');if(!Array.isArray(board))board=[]}catch(e){}let selected=0,x=1800,y=1800,a=-Math.PI/2,energy=100,score=0,active=false,paused=true,name='',keys={},found=new Set(),taken=new Set(),tracks=[],last=0,visited=new Set();
 function ranks(){let b=$('board');b.replaceChildren();if(!board.length)b.insertRow().insertCell().textContent='No adventures yet!';board.forEach((r,i)=>{let row=b.insertRow();[i<3?['🥇','🥈','🥉'][i]:i+1,r.name,r.score+' pts'].forEach(t=>row.insertCell().textContent=t)})}ranks();
-cars.forEach((car,i)=>{let b=document.createElement('button');b.textContent=car[0];b.style.background=car[1];b.className=i===0?'selected':'';b.onclick=()=>{selected=i;document.querySelectorAll('#cars button').forEach((z,j)=>z.classList.toggle('selected',j===i))};$('cars').append(b)});
-function save(){if(!active)return;board.push({name,score});board.sort((a,b)=>b.score-a.score);board=board.slice(0,10);try{localStorage.setItem('mudmasterExplore',JSON.stringify(board))}catch(e){}ranks();active=false;paused=true;keys={};$('garage').hidden=false;$('heading').textContent='Adventure saved! '+score+' points';$('start').textContent='New adventure'}
-$('save').onclick=save;$('open').onclick=()=>{paused=!paused;keys={};$('garage').hidden=!paused;$('start').textContent=active?'Keep exploring':'Let’s explore!'};$('start').onclick=()=>{if(!active){name=$('name').value.trim();if(!name){$('heading').textContent='Enter a nickname first!';return}x=y=1800;a=-Math.PI/2;v=score=dist=jump=0;energy=100;found.clear();taken.clear();visited.clear();tracks=[];active=true}paused=false;$('garage').hidden=true;keys={};$('heading').textContent='Garage'};
-for(let b of document.querySelectorAll('[data-k]')){let k=b.dataset.k;b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[k]=true};for(let ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys[k]=false)}const map={ArrowUp:'gas',w:'gas',ArrowDown:'reverse',s:'reverse',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right',Shift:'boost',' ':'jump'};window.onkeydown=e=>{if(active&&!paused&&map[e.key]){e.preventDefault();keys[map[e.key]]=true}};window.onkeyup=e=>{if(map[e.key])keys[map[e.key]]=false};window.onblur=()=>keys={};
+cars.forEach((car,i)=>{let b=document.createElement('button');b.textContent=car[0];b.style.setProperty('--vehicle',car[1]);b.className=i===0?'selected':'';b.setAttribute('aria-pressed',i===0);b.onclick=()=>{selected=i;document.querySelectorAll('#cars button').forEach((z,j)=>{z.classList.toggle('selected',j===i);z.setAttribute('aria-pressed',j===i)})};$('cars').append(b)});
+function save(){if(!active)return;board.push({name,score});board.sort((a,b)=>b.score-a.score);board=board.slice(0,10);try{localStorage.setItem('mudmasterExplore',JSON.stringify(board))}catch(e){}ranks();active=false;paused=true;keys={};$('garage').hidden=false;$('open').setAttribute('aria-expanded','true');$('heading').textContent='Adventure saved! '+score+' points';$('start').textContent='New adventure'}
+$('save').onclick=save;$('open').onclick=()=>{paused=active?!paused:true;keys={};$('open').setAttribute('aria-expanded',paused);$('garage').hidden=!paused;$('start').textContent=active?'Keep exploring':'Let’s explore!'};$('start').onclick=()=>{if(!active){name=$('name').value.trim();if(!name){$('heading').textContent='Enter a nickname first!';return}x=y=1800;a=-Math.PI/2;score=0;resetDrive();energy=100;found.clear();taken.clear();visited.clear();tracks=[];active=true}paused=false;$('garage').hidden=true;$('open').setAttribute('aria-expanded','false');keys={};$('heading').textContent='Garage'};
+for(let b of document.querySelectorAll('[data-k]')){let k=b.dataset.k;b.onpointerdown=e=>{if(!active||paused)return;e.preventDefault();b.setPointerCapture(e.pointerId);keys[k]=true};for(let ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>keys[k]=false)}const map={ArrowUp:'gas',w:'gas',ArrowDown:'reverse',s:'reverse',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right',Shift:'boost',' ':'jump'};window.onkeydown=e=>{const key=map[e.key]||map[e.key.toLowerCase()];if(active&&!paused&&key){e.preventDefault();keys[key]=true}};window.onkeyup=e=>{const key=map[e.key]||map[e.key.toLowerCase()];if(key)keys[key]=false};window.onblur=()=>keys={};
 function circle(x,y,r,col){g.fillStyle=col;g.beginPath();g.arc(x,y,r,0,7);g.fill()}function rect(x,y,w,h,col){g.fillStyle=col;g.fillRect(x,y,w,h)}function label(t,x,y,size=18){g.font='bold '+size+'px system-ui';g.textAlign='center';g.lineWidth=4;g.strokeStyle='#263a25';g.strokeText(t,x,y);g.fillStyle='white';g.fillText(t,x,y)}
-function draw(){let w=c.clientWidth,h=c.clientHeight,d=Math.min(2,devicePixelRatio||1);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}g.setTransform(d,0,0,d,0,0);rect(0,0,w,h,'#6b984d');g.save();g.translate(w/2-x,h/2-y);rect(0,0,S,S,'#729c4d');g.strokeStyle='#3f6239';g.lineWidth=14;g.strokeRect(0,0,S,S);
-g.strokeStyle='#b9a477';g.lineWidth=70;g.lineCap='round';for(let z of zones){g.beginPath();g.moveTo(1800,1800);g.quadraticCurveTo(z[1],1800,z[1],z[2]);g.stroke()}
-for(let z of zones){circle(z[1],z[2],z[3],z[4]);for(let j=0;j<12;j++){let t=j*2.4,r=z[3]*(.25+.6*(j%5)/5);circle(z[1]+Math.cos(t)*r,z[2]+Math.sin(t)*r,18+j%3*9,z[0]==='Mud Bog'?'#543821':z[0]==='Splash Lake'?'#83c5cf':z[4])}label((found.has(z[0])?'✓ ':'')+z[0],z[1],z[2]-z[3]+40,23)}
-for(let t of tracks){circle(t[0],t[1],t[2],t[3])}for(let [tx,ty,r] of trees){if(Math.abs(tx-x)>w/2+40||Math.abs(ty-y)>h/2+40)continue;circle(tx+5,ty+7,r,'#496b39');circle(tx,ty,r,'#285c35');circle(tx-5,ty-6,r*.65,'#3c8243')}for(let [rx,ry,r] of rocks){circle(rx+3,ry+4,r,'#615b50');circle(rx,ry,r,'#a9a398')}for(let [rx,ry] of ramps){rect(rx-22,ry-17,44,34,'#805332');rect(rx-19,ry-13,38,26,'#d4a15d');label('▲',rx,ry+6,18)}
+const terrainTile=document.createElement('canvas');
+terrainTile.width=terrainTile.height=256;
+const tile=terrainTile.getContext('2d');
+tile.fillStyle='#526b3b';tile.fillRect(0,0,256,256);
+for(let i=0;i<1600;i++){
+  const px=rand()*256,py=rand()*256;
+  tile.fillStyle=i%2?'#c1b98122':'#172c2338';
+  tile.fillRect(px,py,1+rand()*5,1+rand()*2);
+}
+const grassPattern=g.createPattern(terrainTile,'repeat');
+
+function drawZone(z,index){
+  const [name,cx,cy,r]=z;
+  const gradient=g.createRadialGradient(cx-r*.16,cy-r*.22,10,cx,cy,r*1.15);
+  gradient.addColorStop(0,['#4e3629','#374e32','#82786b','#c3a677','#4f817e','#b48b59'][index]);
+  gradient.addColorStop(1,z[4]);
+  g.beginPath();
+  for(let i=0;i<=96;i++){
+    const angle=i/96*Math.PI*2, radius=zoneRadius(z,angle);
+    const px=cx+Math.cos(angle)*radius, py=cy+Math.sin(angle)*radius;
+    if(i===0)g.moveTo(px,py);else g.lineTo(px,py);
+  }
+  g.closePath();g.fillStyle=gradient;g.fill();
+  g.save();g.clip();
+  for(let j=0;j<160;j++){
+    const angle=j*2.39996,radius=r*Math.sqrt(j/160);
+    const px=cx+Math.cos(angle)*radius,py=cy+Math.sin(angle)*radius;
+    const length=8+j%13;
+    g.strokeStyle=(index===4||index===3)?'#eee0b330':'#1a201d36';
+    g.lineWidth=index===0?3:1;
+    g.beginPath();g.moveTo(px,py);g.quadraticCurveTo(px+length*.5,py+3,px+length,py-1);g.stroke();
+  }
+  g.restore();
+  label((found.has(name)?'✓ ':'')+name,cx,cy-r+40,19);
+}
+
+function draw(){let w=c.clientWidth,h=c.clientHeight,d=Math.min(2,devicePixelRatio||1);if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){c.width=Math.round(w*d);c.height=Math.round(h*d)}g.setTransform(d,0,0,d,0,0);rect(0,0,w,h,'#6b984d');g.save();g.translate(w/2-x,h/2-y);rect(0,0,S,S,grassPattern);g.strokeStyle='#3f6239';g.lineWidth=14;g.strokeRect(0,0,S,S);
+g.lineCap='round';
+for(const [width,color] of [[78,'#495039'],[70,'#9a845d'],[54,'#ad9569'],[2,'#786747']]){
+  g.strokeStyle=color;g.lineWidth=width;
+  for(const z of zones){g.beginPath();g.moveTo(1800,1800);g.quadraticCurveTo(z[1],1800,z[1],z[2]);g.stroke()}
+}
+zones.forEach((z,i)=>{
+  if(Math.abs(z[1]-x)<w/2+z[3]*1.2&&Math.abs(z[2]-y)<h/2+z[3]*1.2)drawZone(z,i);
+});
+for(const [tx,ty,angle,ground] of tracks){
+  if(Math.abs(tx-x)>w/2+12||Math.abs(ty-y)>h/2+12)continue;
+  g.save();g.translate(tx,ty);g.rotate(angle);g.globalAlpha=ground==='water'?.28:.42;
+  rect(-4,-2,8,4,surfaces[ground].color);g.restore();
+}
+for(const p of particles){
+  g.globalAlpha=p.life*2;circle(p.x,p.y,1.5+p.life*5,p.color);
+}
+g.globalAlpha=1;for(let [tx,ty,r] of trees){if(Math.abs(tx-x)>w/2+40||Math.abs(ty-y)>h/2+40)continue;g.fillStyle='#17251755';g.beginPath();g.ellipse(tx+r*.56,ty+r*.33,r*1.25,r*.78,.45,0,Math.PI*2);g.fill();
+  for(let i=0;i<3;i++){const radius=r*(1-i*.22);circle(tx-i*2,ty-i*3,radius,['#263f2d','#355439','#496344'][i])}}for(let [rx,ry,r] of rocks){circle(rx+3,ry+4,r,'#615b50');circle(rx,ry,r,'#a9a398')}for(let [rx,ry] of ramps){rect(rx-22,ry-17,44,34,'#805332');rect(rx-19,ry-13,38,26,'#d4a15d');label('▲',rx,ry+6,18)}
 gold.forEach(([gx,gy],i)=>{if(!taken.has(i)){circle(gx,gy,11,'#d68a18');circle(gx,gy,8,'#ffdf4d');label('★',gx,gy+5,12)}});circle(1800,1800,85,'#c7b183');label('HOME GARAGE',1800,1740);g.restore();
-let car=cars[selected],L=car[5],B=car[6],lift=jump>0?Math.sin(jump/36*Math.PI)*14:0;g.save();g.translate(w/2,h/2);g.rotate(a);rect(-L/2+3,-B/2+5,L,B,'#0004');g.translate(0,-lift);for(let tx of [-L*.32,L*.32])for(let ty of [-B*.48,B*.48]){rect(tx-7,ty-5,14,10,'#202522');rect(tx-5,ty-3,10,6,'#4b5049')}rect(-L/2,-B/2,L,B,car[1]);rect(L*.02,-B*.36,L*.24,B*.72,'#a8e4f5');if(selected===0||selected===4)rect(-L*.44,-B*.34,L*.32,B*.68,'#343b37');else if(selected===2||selected===3)rect(-L*.25,-B*.27,L*.24,B*.54,'#303d3a');rect(L/2-3,-B/2+2,4,5,'#fff7b0');rect(L/2-3,B/2-7,4,5,'#fff7b0');g.restore();
+let car=cars[selected],L=car[5],B=car[6];g.save();g.translate(w/2,h/2);g.rotate(a);g.fillStyle='#10171366';g.beginPath();g.ellipse(3,4,L*.63,B*.68,0,0,Math.PI*2);g.fill();g.translate(-lift * Math.sin(a) * .5,-lift * Math.cos(a) * .5);for(let tx of [-L*.32,L*.32])for(let ty of [-B*.48,B*.48]){g.save();g.translate(tx,ty);if(tx>0)g.rotate(steering*.35);
+  rect(-8,-5,16,10,'#171b19');
+  for(let tread=-6;tread<=6;tread+=3)rect(tread,-4,1,8,'#535651');
+  g.restore();}g.fillStyle=car[1];g.beginPath();g.roundRect(-L/2,-B/2,L,B,[4,5,5,4]);g.fill();
+rect(-L*.42,-B*.44,L*.82,2,'#fff5');rect(-L*.42,B*.38,L*.82,2,'#161d1950');rect(L*.02,-B*.36,L*.24,B*.72,'#a8e4f5');if(selected===0||selected===4)rect(-L*.44,-B*.34,L*.32,B*.68,'#343b37');else if(selected===2||selected===3)rect(-L*.25,-B*.27,L*.24,B*.54,'#303d3a');rect(L/2-3,-B/2+2,4,5,'#fff7b0');rect(L/2-3,B/2-7,4,5,'#fff7b0');g.restore();
 let m=Math.min(112,w*.24),mx=w-m-9,my=9;rect(mx,my,m,m,'#17291edc');for(let z of zones)circle(mx+z[1]/S*m,my+z[2]/S*m,Math.max(3,z[3]/S*m),found.has(z[0])?'#ffda50':z[4]);circle(mx+x/S*m,my+y/S*m,4,'white');label('MAP',mx+m/2,my+m+15,12)}
-function loop(t){let dt=Math.min(2,(t-last)/16.67||1);last=t;if(active&&!paused){let car=cars[selected],wet=zones.find(z=>[0,4].includes(zones.indexOf(z))&&Math.hypot(x-z[1],y-z[2])<z[3]),boost=keys.boost&&energy>1;energy=Math.max(0,Math.min(100,energy+(boost?-.5:.2)*dt));let max=car[2]*(wet?car[3]*.72:1)*(boost?1.6:1);if(keys.gas||boost)v+=.22*dt;else if(keys.reverse)v-=.18*dt;else v*=Math.pow(.94,dt);v=Math.max(-max*.55,Math.min(max,v));let turn=(keys.right?1:0)-(keys.left?1:0);a+=turn*car[4]*dt*(v<-.1?-1:1);let ox=x,oy=y;x=Math.max(30,Math.min(S-30,x+Math.cos(a)*v*dt));y=Math.max(30,Math.min(S-30,y+Math.sin(a)*v*dt));dist+=Math.hypot(x-ox,y-oy);let cell=Math.floor(x/150)+','+Math.floor(y/150);if(!visited.has(cell)){visited.add(cell);score+=2}if((keys.jump&&airReady||ramps.some(r=>Math.hypot(x-r[0],y-r[1])<22)&&Math.abs(v)>3)&&jump<=0){jump=36;airReady=false;score+=5}if(!keys.jump)airReady=true;jump=Math.max(0,jump-dt);if(Math.abs(v)>1&&Math.random()<.6){tracks.push([x-Math.cos(a)*16,y-Math.sin(a)*16,wet?5:2,wet?'#624321':'#9d9567']);if(tracks.length>350)tracks.shift()}gold.forEach(([gx,gy],i)=>{if(!taken.has(i)&&Math.hypot(x-gx,y-gy)<30){taken.add(i);score+=25;$('tip').textContent='⭐ Hidden gold! +25 points'}});for(let z of zones)if(!found.has(z[0])&&Math.hypot(x-z[1],y-z[2])<z[3]){found.add(z[0]);score+=150;$('tip').textContent='🗺️ Discovered '+z[0]+'! +150 points'+(found.size===6?' — All landmarks found!':'')};$('hud').textContent='⭐ '+score+' · 🗺️ '+found.size+'/6 · ⚡ '+Math.floor(energy)+'%'}draw();requestAnimationFrame(loop)}requestAnimationFrame(loop);
-</script></body></html>
+</script><script src="drive.js"></script></body></html>
